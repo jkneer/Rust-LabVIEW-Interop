@@ -32,6 +32,13 @@ pub type ErrorClusterPtr<'a> = UPtr<ErrorCluster<'a>>;
 
 #[cfg(feature = "link")]
 impl<'a> ErrorCluster<'a> {
+    pub fn status(&self) -> bool {
+        self.status == super::boolean::LV_TRUE
+    }
+    pub fn code(&self) -> LVStatusCode {
+        self.code
+    }
+
     fn format_error_source(source: &str, description: &str) -> String {
         match (source, description) {
             ("", description) => format!("<ERR>\n{description}"),
@@ -114,6 +121,38 @@ impl ToLvError for LVInteropError {
     fn description(&self) -> Cow<'_, str> {
         self.to_string().into()
     }
+}
+
+#[macro_export]
+/// the with_lverrorhandling macro
+/// takes
+macro_rules! with_lverrorhandling {
+    // Match a variadic number of parameters
+    ($error_cluster:expr, $func:expr, $($params:expr),*) => {
+        {
+            // only run if the incoming error cluster does not have an error
+            if !$error_cluster.status() {
+            // Call the function within a context
+                match $func($($params),*) {
+                    Ok(_) => LVStatusCode::SUCCESS,
+                    Err(err) => {
+                        let errstr = err.to_string();
+                        let errcode = LVStatusCode::from(err);
+
+                        // Update the error cluster if there's an error
+                        if let Ok(cluster) = unsafe { $error_cluster.as_ref_mut() } {
+
+                            cluster.set_error(errcode, "Rust Interop Error", &errstr).unwrap();
+                        }
+                        // Return the appropriate LVStatusCode
+                        errcode
+                    }
+                }
+            } else {
+                $error_cluster.code()
+            }
+        }
+    };
 }
 
 #[cfg(test)]

@@ -1,5 +1,6 @@
 use std::ptr::{addr_of, read_unaligned};
 
+use labview_interop::errors::{InternalError, LVStatusCode};
 use labview_interop::labview_layout;
 use labview_interop::types::{LVArrayHandle, LVVariant, Waveform};
 
@@ -23,7 +24,7 @@ pub extern "C" fn extract_test_struct_with_waveform(
     three: *mut u32,
     wv_first: *mut f64,
     wv_last: *mut f64,
-) -> i32 {
+) -> LVStatusCode {
     let result = std::panic::catch_unwind(|| unsafe {
         let test = test_struct.as_ref().unwrap();
         let waveform_data = test.waveform.data.as_ref().unwrap().data_as_slice();
@@ -35,10 +36,9 @@ pub extern "C" fn extract_test_struct_with_waveform(
     });
 
     if result.is_err() {
-        -1
-    }
-    else {
-        0
+        (InternalError::Misc as i32).into()
+    } else {
+        LVStatusCode::SUCCESS
     }
 }
 
