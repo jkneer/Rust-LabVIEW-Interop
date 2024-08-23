@@ -647,4 +647,12 @@ mod tests {
 
         assert_eq!(lv_status, LVStatusCode(542_002));
     }
+
+    #[test]
+    fn test_error_clone_copy() {
+        let err: LVInteropError = MgError::BogusError.into();
+        let err_cloned = err.clone();
+
+        assert_eq!(err, err_cloned)
+    }
 }
