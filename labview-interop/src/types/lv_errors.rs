@@ -125,7 +125,35 @@ impl ToLvError for LVInteropError {
 
 #[macro_export]
 /// the with_lverrorhandling macro
+///
 /// Error Type needs to implement ToLvError
+///
+/// # Example
+///
+/// ```
+/// #[no_mangle]
+/// pub extern "C" fn set_x_mode_by_id(
+///     error: ErrorClusterPtr,
+///     id: LStrHandle,
+///     lv_x: UPtr<i32>,
+/// ) -> LVStatusCode {
+///     with_lverrorhandling!(
+///         &error,
+///         |id1: LStrHandle, lv_x1: UPtr<i32>| -> Result<()> {
+///             let id = id1.to_rust_string();
+///             let x = Xode::try_from_primitive(*lv_x1)?;
+///
+///             with_mut_device(&id, |device, _is_live| {
+///                 info!("Setting X mode {:?}", x);
+///                 device.set_x_mode(x)?;
+///                 Ok(())
+///             })
+///         },
+///         id,
+///         lv_x
+///     )
+/// }
+/// ```
 macro_rules! with_lverrorhandling {
     // Match a variadic number of parameters
     ($error_cluster:expr, $func:expr, $($params:expr),*) => {
