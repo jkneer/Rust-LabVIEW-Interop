@@ -125,34 +125,32 @@ impl ToLvError for LVInteropError {
 
 #[macro_export]
 /// the with_lverrorhandling macro
-/// takes
+/// Error Type needs to implement ToLvError
 macro_rules! with_lverrorhandling {
     // Match a variadic number of parameters
     ($error_cluster:expr, $func:expr, $($params:expr),*) => {
-        {
-            // only run if the incoming error cluster does not have an error
-            if !$error_cluster.status() {
-            // Call the function within a context
-                match $func($($params),*) {
-                    Ok(_) => LVStatusCode::SUCCESS,
-                    Err(err) => {
-                        let errstr = err.to_string();
-                        let errcode = LVStatusCode::from(err);
+        // only run if the incoming error cluster does not have an error
+        if !$error_cluster.status() {
+        // Call the function within a error handling context
+            match ($func)($($params),*) {
+                Ok(_) => LVStatusCode::SUCCESS,
+                Err(err) => {
+                    let errstr = err.to_string();
+                    let errcode = err.code();
 
-                        // Update the error cluster if there's an error
-                        if let Ok(cluster) = unsafe { $error_cluster.as_ref_mut() } {
+                    // Update the error cluster if there's an error
+                    if let Ok(cluster) = unsafe { $error_cluster.as_ref_mut() } {
 
-                            cluster.set_error(errcode, "Rust Interop Error", &errstr).unwrap();
-                        }
-                        // Return the appropriate LVStatusCode
-                        errcode
+                        cluster.set_error(errcode, "Rust Interop Error", &errstr).unwrap();
                     }
+                    // Return the appropriate LVStatusCode
+                    errcode
                 }
-            } else {
-                $error_cluster.code()
             }
+        } else {
+            $error_cluster.code()
         }
-    };
+    }
 }
 
 #[cfg(test)]
